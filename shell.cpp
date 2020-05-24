@@ -5,6 +5,7 @@
 #include <sys/wait.h>
 #include<readline/readline.h> 
 #include<readline/history.h>
+#include <signal.h>
 
 
 #define RED   		"\001\033[0;31m\002"
@@ -21,90 +22,46 @@
 #define BUILT_NUM 3
 
 using namespace std;
-
 void shell_cd(char **args);
 void shell_help(char **args);
 void shell_exit(char **args);
-
-const char *builtins_str[]={"cd","help","exit"};
-
-void (*builtin_func[]) (char **) = {
-  &shell_cd,
-  &shell_help,
-  &shell_exit
-};
-
-void shell_cd(char **args)
-{
-  if (args[1] == NULL) {
-    fprintf(stderr, "shell: expected argument to \"cd\"\n");
-  } else {
-    if (chdir(args[1]) != 0) {
-      perror("shell");
-    }
-  }
-  return;
+void shell_loop();
+char *shell_readline(char* path);
+char **parse_line(char *line);
+void shell_execute(char **args);
+void shell_launch(char **args);
+void sigintHandler(int sig_num) 
+{ 
+	cout<<'\b'<<'\b'<<"  ";
+	//cout<<endl;
+	return; 
+} 
+int main(){
+	
+	shell_loop();
+	return 0;
+	
 }
 
-void shell_help(char **args)
-{
-  int i;
-  cout<<"Type program names and arguments, and hit enter.\n";
-  cout<<"The following commands are built in:\n";
+void shell_loop(){
+	char *line;
+	char **args;
+	char path[FILENAME_MAX];
+	signal(SIGINT, sigintHandler);
+	while(1){
+		
+		getcwd(path,FILENAME_MAX);
+		line = shell_readline(path);
+		args = parse_line(line);
+		shell_execute(args);
+		free(line);
+		free(args);
+		}	
 
-  for (i = 0; i < BUILT_NUM; i++) {
-    cout<<builtins_str[i]<<"\n";
-  }
-
-  cout<<"Use the man command for information on other programs.\n";
-  return ;
-}
-
-void shell_exit(char **args)
-{
-  free(args);
-  exit(0);
-}
-
-void shell_launch(char **args){
-	pid_t pid, wpid;
-	int status;
-	pid = fork();
-	if(pid == 0){
-		//child
-		if(execvp(args[0],args)==-1){
-			perror("shell");
-		}
-		exit(1);
-	}
-	else if(pid == -1){
-		perror("shell");
-	}
-	else{
-		//parent
-		do {
-      		wpid = waitpid(pid, &status, WUNTRACED);
-    	   } while (!WIFEXITED(status) && !WIFSIGNALED(status));
-	}
-	return;
-}
-
-void shell_execute(char **args){
-	if(args[0]==NULL){
-		return;
-	}
-	for(int i=0; i<BUILT_NUM; i++){
-		if(strcmp(args[0], builtins_str[i])==0){
-			(*builtin_func[i])(args);
-			return;
-		}
-	}
-	shell_launch(args);
-	return;
 }
 
 char *shell_readline(char* path){
-	char* buf; 
+	char *buf; 
   	char *line = (char*)malloc(1000*sizeof(char));
     char str[200];
 	strcpy(str, RED);
@@ -120,9 +77,12 @@ char *shell_readline(char* path){
 	buf = readline(str); 
     if (strlen(buf) != 0) { 
         add_history(buf); 
-        strcpy(line, buf); 
+        strcpy(line, buf);
+		free(buf);
         return line; 
-    } else { 
+    } else {
+		free(buf);
+		free(line);
         shell_readline(path);
     } 
 }
@@ -150,26 +110,76 @@ char **parse_line(char *line){
 	}
 	return args;
 }
-
-void shell_loop(){
-	char *line;
-	char **args;
-	char path[FILENAME_MAX];
-	while(1){
-		
-		getcwd(path,FILENAME_MAX);
-		line = shell_readline(path);
-		args = parse_line(line);
-		shell_execute(args);
-		free(line);
-		free(args);
-		}	
-
+const char *builtins_str[]={"cd","help","exit"};
+void (*builtin_func[]) (char **) = {
+  &shell_cd,
+  &shell_help,
+  &shell_exit
+};
+void shell_execute(char **args){
+	if(args[0]==NULL){
+		return;
+	}
+	for(int i=0; i<BUILT_NUM; i++){
+		if(strcmp(args[0], builtins_str[i])==0){
+			(*builtin_func[i])(args);
+			return;
+		}
+	}
+	shell_launch(args);
+	return;
+}
+void shell_cd(char **args)
+{
+  if (args[1] == NULL) {
+    fprintf(stderr, "shell: expected argument to \"cd\"\n");
+  } else {
+    if (chdir(args[1]) != 0) {
+      perror("rshell");
+    }
+  }
+  return;
 }
 
-int main(){
-	
-	shell_loop();
-	return 1;
-	
+void shell_help(char **args)
+{
+  int i;
+  cout<<"Type program names and arguments, and hit enter.\n";
+  cout<<"The following in-built commands are supported:\n";
+
+  for (i = 0; i < BUILT_NUM; i++) {
+    cout<<builtins_str[i]<<"\n";
+  }
+
+  cout<<"Use the man command for information on other programs.\n";
+  return ;
+}
+
+void shell_exit(char **args)
+{
+  free(args);
+  exit(0);
+}
+
+void shell_launch(char **args){
+	pid_t pid, wpid;
+	int status;
+	pid = fork();
+	if(pid == 0){
+		//child
+		if(execvp(args[0],args)==-1){
+			perror("rshell");
+		}
+		exit(1);
+	}
+	else if(pid == -1){
+		perror("rshell");
+	}
+	else{
+		//parent
+		do {
+      		wpid = waitpid(pid, &status, WUNTRACED);
+    	   } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+	}
+	return;
 }
