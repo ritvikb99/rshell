@@ -3,17 +3,19 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/wait.h>
+#include<readline/readline.h> 
+#include<readline/history.h>
 
 
-#define RED   		"\033[0;31m"
-#define YELLOW 		"\033[0;33m"
-#define CYAN 		"\033[0;36m"
-#define GREEN 		"\033[0;32m"
-#define BLUE 		"\033[0;34m"
-#define INVERT		"\033[0;7m"
-#define RESET  		"\e[0m" 
-#define BOLD		"\e[1m"
-#define ITALICS		"\e[3m"
+#define RED   		"\001\033[0;31m\002"
+#define YELLOW 		"\001\033[0;33m\002"
+#define CYAN 		"\001\033[0;36m\002"
+#define GREEN 		"\001\033[0;32m\002"
+#define BLUE 		"\001\033[0;34m\002"
+#define INVERT		"\001\033[0;7m\002"
+#define RESET  		"\001\e[0m\002" 
+#define BOLD		"\001\e[1m\002"
+#define ITALICS		"\001\e[3m\002"
 #define TOK_BUFSIZE 64
 #define TOK_DELIM " \t\r\n\a"
 #define BUILT_NUM 3
@@ -101,10 +103,28 @@ void shell_execute(char **args){
 	return;
 }
 
-char *shell_readline(){ 
+char *shell_readline(char* path){
+	char* buf; 
   	char *line = (char*)malloc(1000*sizeof(char));
-	cin.getline(line,1000);
-	return line;
+    char str[200];
+	strcpy(str, RED);
+	strcat(str, BOLD);
+	strcat(str, getenv("USER"));
+	strcat(str, RESET);
+	strcat(str, ":");
+	strcat(str, CYAN);
+	strcat(str, BOLD);
+	strcat(str, path);
+	strcat(str, RESET);
+	strcat(str, "> ");
+	buf = readline(str); 
+    if (strlen(buf) != 0) { 
+        add_history(buf); 
+        strcpy(line, buf); 
+        return line; 
+    } else { 
+        shell_readline(path);
+    } 
 }
 
 char **parse_line(char *line){
@@ -120,6 +140,7 @@ char **parse_line(char *line){
 		}
 		token = strtok(NULL, TOK_DELIM);
 	}
+	
 	return args;
 }
 
@@ -130,8 +151,7 @@ void shell_loop(){
 	while(1){
 		
 		getcwd(path,FILENAME_MAX);
-		cout<<RED<<BOLD<<getenv("USER")<<RESET<<":"<<CYAN<<BOLD<<path<<RESET<<">";
-		line = shell_readline();
+		line = shell_readline(path);
 		args = parse_line(line);
 		shell_execute(args);
 		free(line);
