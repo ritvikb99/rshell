@@ -1,5 +1,5 @@
 # rshell
-RSHELL is a simple linux shell written in C++. 
+RSHELL is a simple Unix shell written in C++. 
 
 ## Installation
 1. Install the latest "libreadline-dev" library if not already installed.
