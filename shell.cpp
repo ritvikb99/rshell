@@ -140,7 +140,14 @@ char **parse_line(char *line){
 		}
 		token = strtok(NULL, TOK_DELIM);
 	}
-	
+	if(!strcmp(args[0],"ls")){
+		args[position]=(char*)"--color";
+		position++;
+		args[position]=0;
+	}
+	else{
+		args[position]=0;
+	}
 	return args;
 }
 
